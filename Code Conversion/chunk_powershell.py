@@ -5,8 +5,22 @@ import re
 from pathlib import Path
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from transformers import AutoTokenizer
 
+tokenizer = AutoTokenizer.from_pretrained(
+    "Qwen/Qwen2.5-Coder-7B-Instruct"
+)
 
+def token_count(text: str) -> int:
+    return len(tokenizer.encode(text, add_special_tokens=False))
+
+# The raw-string regex uses a zero-width lookahead, so a split starts at the
+# declaration instead of consuming it. With MULTILINE, ^ means each line start;
+# [ \t]* allows indentation, `function` is case-insensitive, and [ \t]+ requires
+# whitespace before a name made of letters, digits, underscores, or hyphens.
+# Indented nested functions match too; this pattern does not track brace depth.
+# For example, it matches "function Get-OsInventory" and
+# "    function Get_Nested2".
 FUNCTION_PATTERN = re.compile(
     r"(?=^[ \t]*function[ \t]+[A-Za-z0-9_-]+)",
     re.MULTILINE | re.IGNORECASE,
@@ -94,6 +108,10 @@ def chunk_powershell(
     chunks: list[dict[str, object]] = []
 
     for unit_name, unit_source in extract_powershell_units(source):
+        if token_count(unit_source) > chunk_size:
+            print(
+                f"Unit '{unit_name}' exceeds {chunk_size} characters; splitting into smaller chunks."
+            )
         pieces = splitter.split_text(unit_source)
 
         for piece_index, piece in enumerate(pieces):
