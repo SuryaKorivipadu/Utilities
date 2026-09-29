@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import json
-import re
+import json, re
 from pathlib import Path
 
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from transformers import AutoTokenizer
+from checkPowershellComponents import get_powershell_components
 
 tokenizer = AutoTokenizer.from_pretrained(
     "Qwen/Qwen2.5-Coder-7B-Instruct"
@@ -76,55 +75,81 @@ Requirements:
 def chunk_powershell(
     source: str,
     source_path: str,
-    chunk_size: int = 3500,
+    chunk_size: int = 500,
     chunk_overlap: int = 250,
 ) -> list[dict[str, object]]:
     """
-    Produce semantic PowerShell chunks, then recursively split large units.
-
-    chunk_size is measured in characters, not tokens. For local SLMs,
-    3,500 characters is a conservative starting point.
+    Produce semantic PowerShell chunks, then split large units based on powershell ast parser.
     """
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size,
-        chunk_overlap=chunk_overlap,
-        separators=[
-            "\nfunction ",
-            "\nparam(",
-            "\ntry",
-            "\ncatch",
-            "\nif ",
-            "\nforeach ",
-            "\nwhile ",
-            "\n\n",
-            "\n",
-            " ",
-            "",
-        ],
-        keep_separator=True,
-        strip_whitespace=True,
-    )
-
     chunks: list[dict[str, object]] = []
 
     for unit_name, unit_source in extract_powershell_units(source):
         if token_count(unit_source) > chunk_size:
-            print(
-                f"Unit '{unit_name}' exceeds {chunk_size} characters; splitting into smaller chunks."
+            ast_units = get_powershell_components(unit_source)
+            ast_unit = next(
+                (unit for unit in ast_units if unit["Name"] == unit_name),
+                ast_units[0],
             )
-        pieces = splitter.split_text(unit_source)
+            components = ast_unit["Statements"]
+            pieces: list[list[dict[str, str]]] = []
+            pending: list[dict[str, str]] = []
 
-        for piece_index, piece in enumerate(pieces):
+            for component in components:
+                candidate_components = pending + [component]
+                candidate_text = "\n\n".join(
+                    item["Text"] for item in candidate_components
+                )
+
+                if token_count(candidate_text) <= chunk_size:
+                    pending = candidate_components
+                    continue
+
+                if pending:
+                    pieces.append(pending)
+                pending = [component]
+
+                if token_count(component["Text"]) > chunk_size:
+                    pieces.append(pending)
+                    pending = []
+
+            if pending:
+                pieces.append(pending)
+
+            print(
+                f"Unit '{unit_name}' exceeds {chunk_size} tokens; "
+                f"split into {len(pieces)} AST-based chunks."
+            )
+
+            for piece_index, piece_components in enumerate(pieces):
+                piece = "\n\n".join(
+                    component["Text"] for component in piece_components
+                )
+                piece_token_count = token_count(piece)
+                chunks.append(
+                    {
+                        "chunk_id": f"{unit_name}:{piece_index + 1}",
+                        "source_file": source_path,
+                        "unit": unit_name,
+                        "part": piece_index + 1,
+                        "total_parts": len(pieces),
+                        "context": build_context(unit_name, source_path),
+                        "powershell": piece,
+                        "character_count": len(piece),
+                        "token_count": piece_token_count,
+                        "over_token_limit": piece_token_count > chunk_size,
+                    }
+                )
+        else:
             chunks.append(
                 {
-                    "chunk_id": f"{unit_name}:{piece_index + 1}",
+                    "chunk_id": unit_name,
                     "source_file": source_path,
                     "unit": unit_name,
-                    "part": piece_index + 1,
-                    "total_parts": len(pieces),
+                    "part": 1,
+                    "total_parts": 1,
                     "context": build_context(unit_name, source_path),
-                    "powershell": piece,
-                    "character_count": len(piece),
+                    "powershell": unit_source,
+                    "character_count": len(unit_source),
                 }
             )
 
