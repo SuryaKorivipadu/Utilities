@@ -13,7 +13,7 @@ function Get-OsInventory {
 
     [pscustomobject]@{
         ComputerName = $env:COMPUTERNAME
-        UserName = $env:USERNAME
+        UserName = $env:USERNAME    
         Manufacturer = $computer.Manufacturer
         Model = $computer.Model
         OperatingSystem = $os.Caption

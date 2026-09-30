@@ -19,55 +19,134 @@ if ($errors.Count -gt 0) {
 }
 
 $functionType = [System.Management.Automation.Language.FunctionDefinitionAst]
-$functions = @($ast.EndBlock.Statements | Where-Object { $_ -is $functionType })
-$scriptStatements = [System.Collections.Generic.List[object]]::new()
+$components = [System.Collections.Generic.List[object]]::new()
 
 foreach ($usingStatement in $ast.UsingStatements) {
-    $scriptStatements.Add($usingStatement)
-}
-
-if ($null -ne $ast.ParamBlock) {
-    $scriptStatements.Add($ast.ParamBlock)
-}
-
-foreach ($statement in $ast.EndBlock.Statements) {
-    if ($statement -isnot $functionType) {
-        $scriptStatements.Add($statement)
-    }
-}
-
-$result = [System.Collections.Generic.List[object]]::new()
-if ($scriptStatements.Count -gt 0) {
-    $result.Add([pscustomobject]@{
+    $components.Add([pscustomobject]@{
         Name = "script"
-        Statements = @($scriptStatements | ForEach-Object {
-            [pscustomobject]@{
-                Type = $_.GetType().Name
-                Text = $_.Extent.Text
-            }
+        Type = $usingStatement.GetType().Name
+        StartOffset = $usingStatement.Extent.StartOffset
+        StartLine = $usingStatement.Extent.StartLineNumber
+        EndLine = $usingStatement.Extent.EndLineNumber
+        Text = $usingStatement.Extent.Text
+        Statements = @([pscustomobject]@{
+            Type = $usingStatement.GetType().Name
+            StartLine = $usingStatement.Extent.StartLineNumber
+            EndLine = $usingStatement.Extent.EndLineNumber
+            Text = $usingStatement.Extent.Text
         })
     })
 }
 
-foreach ($function in $functions) {
-    $functionStatements = [System.Collections.Generic.List[object]]::new()
-    if ($null -ne $function.Body.ParamBlock) {
-        $functionStatements.Add($function.Body.ParamBlock)
-    }
-    foreach ($statement in $function.Body.EndBlock.Statements) {
-        $functionStatements.Add($statement)
+if ($null -ne $ast.ParamBlock) {
+    $attributes = @($ast.ParamBlock.Attributes)
+    foreach ($attribute in $attributes) {
+        $components.Add([pscustomobject]@{
+            Name = "script"
+            Type = $attribute.GetType().Name
+            StartOffset = $attribute.Extent.StartOffset
+            StartLine = $attribute.Extent.StartLineNumber
+            EndLine = $attribute.Extent.EndLineNumber
+            Text = $attribute.Extent.Text
+            Statements = @([pscustomobject]@{
+                Type = $attribute.GetType().Name
+                StartLine = $attribute.Extent.StartLineNumber
+                EndLine = $attribute.Extent.EndLineNumber
+                Text = $attribute.Extent.Text
+            })
+        })
     }
 
-    $result.Add([pscustomobject]@{
-        Name = $function.Name
-        Statements = @(
+    $paramStart = if ($attributes.Count -gt 0) {
+        ($attributes | ForEach-Object { $_.Extent.EndOffset } | Measure-Object -Maximum).Maximum
+    }
+    else {
+        $ast.ParamBlock.Extent.StartOffset
+    }
+    $paramEnd = $ast.ParamBlock.Extent.EndOffset
+
+    if ($paramEnd -gt $paramStart) {
+        $paramText = $source.Substring($paramStart, $paramEnd - $paramStart).Trim()
+        if ($paramText) {
+            $startLine = $source.Substring(0, $paramStart).Split("`n").Length
+            $components.Add([pscustomobject]@{
+                Name = "script"
+                Type = "ParamBlockAst"
+                StartOffset = $paramStart
+                StartLine = $startLine
+                EndLine = $ast.ParamBlock.Extent.EndLineNumber
+                Text = $paramText
+                Statements = @([pscustomobject]@{
+                    Type = "ParamBlockAst"
+                    StartLine = $startLine
+                    EndLine = $ast.ParamBlock.Extent.EndLineNumber
+                    Text = $paramText
+                })
+            })
+        }
+    }
+}
+
+foreach ($statement in $ast.EndBlock.Statements) {
+    if ($statement -is $functionType) {
+        $functionStatements = [System.Collections.Generic.List[object]]::new()
+        if ($null -ne $statement.Body.ParamBlock) {
+            $functionStatements.Add($statement.Body.ParamBlock)
+        }
+        foreach ($bodyStatement in $statement.Body.EndBlock.Statements) {
+            $functionStatements.Add($bodyStatement)
+        }
+
+        $statements = @(
             $functionStatements | ForEach-Object {
                 [pscustomobject]@{
                     Type = $_.GetType().Name
+                    StartLine = $_.Extent.StartLineNumber
+                    EndLine = $_.Extent.EndLineNumber
                     Text = $_.Extent.Text
                 }
             }
         )
+        $components.Add([pscustomobject]@{
+            Name = $statement.Name
+            Type = $statement.GetType().Name
+            StartOffset = $statement.Extent.StartOffset
+            StartLine = $statement.Extent.StartLineNumber
+            EndLine = $statement.Extent.EndLineNumber
+            Text = $statement.Extent.Text
+            Statements = $statements
+        })
+    }
+    else {
+        $components.Add([pscustomobject]@{
+            Name = "script"
+            Type = $statement.GetType().Name
+            StartOffset = $statement.Extent.StartOffset
+            StartLine = $statement.Extent.StartLineNumber
+            EndLine = $statement.Extent.EndLineNumber
+            Text = $statement.Extent.Text
+            Statements = @([pscustomobject]@{
+                Type = $statement.GetType().Name
+                StartLine = $statement.Extent.StartLineNumber
+                EndLine = $statement.Extent.EndLineNumber
+                Text = $statement.Extent.Text
+            })
+        })
+    }
+}
+
+$result = [System.Collections.Generic.List[object]]::new()
+$order = 0
+foreach ($component in ($components | Sort-Object StartOffset)) {
+    $order++
+    $result.Add([pscustomobject]@{
+        Order = $order
+        Name = $component.Name
+        Type = $component.Type
+        StartLine = $component.StartLine
+        EndLine = $component.EndLine
+        Text = $component.Text
+        Statements = $component.Statements
     })
 }
 
