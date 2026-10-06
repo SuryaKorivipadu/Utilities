@@ -1,0 +1,136 @@
+[
+  {
+    "chunk_id": "script",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "script",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: script\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "[CmdletBinding()]",
+    "character_count": 17
+  },
+  {
+    "chunk_id": "script",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "script",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: script\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "param(\r\n    [string]$OutputPath = \"$env:TEMP\\endpoint-readiness-audit.json\",\r\n    [int]$RecentErrorHours = 24\r\n)",
+    "character_count": 112
+  },
+  {
+    "chunk_id": "script",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "script",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: script\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "Set-StrictMode -Version Latest",
+    "character_count": 30
+  },
+  {
+    "chunk_id": "script",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "script",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: script\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "$ErrorActionPreference = \"Stop\"",
+    "character_count": 31
+  },
+  {
+    "chunk_id": "Get-OsInventory",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-OsInventory",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-OsInventory\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Get-OsInventory {\n$os = Get-CimInstance -ClassName Win32_OperatingSystem\n\n$computer = Get-CimInstance -ClassName Win32_ComputerSystem\n\n[pscustomobject]@{\r\n        ComputerName = $env:COMPUTERNAME\r\n        UserName = $env:USERNAME    \r\n        Manufacturer = $computer.Manufacturer\r\n        Model = $computer.Model\r\n        OperatingSystem = $os.Caption\r\n        Version = $os.Version\r\n        BuildNumber = $os.BuildNumber\r\n        LastBootTime = $os.LastBootUpTime\r\n        FreeMemoryGB = [math]::Round($os.FreePhysicalMemory / 1MB, 2)\r\n    }\n}",
+    "character_count": 554
+  },
+  {
+    "chunk_id": "Get-DiskHealth:1",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-DiskHealth",
+    "part": 1,
+    "total_parts": 2,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-DiskHealth\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "$warningThreshold = 15\n\n$criticalThreshold = 5\n\n$volumes = Get-Volume |\r\n        Where-Object {\r\n            $_.DriveLetter -and $_.FileSystem -eq \"NTFS\"\r\n        } |\r\n        Select-Object `\r\n            DriveLetter,\r\n            DriveType,\r\n            FileSystem,\r\n            FileSystemLabel,\r\n            HealthStatus,\r\n            OperationalStatus,\r\n            Path,\r\n            UniqueId,\r\n            @{Name = \"SizeGB\"; Expression = {\r\n                [math]::Round($_.Size / 1GB, 2)\r\n            }},\r\n            @{Name = \"FreeGB\"; Expression = {\r\n                [math]::Round($_.SizeRemaining / 1GB, 2)\r\n            }}",
+    "character_count": 631,
+    "token_count": 144,
+    "over_token_limit": false
+  },
+  {
+    "chunk_id": "Get-DiskHealth:2",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-DiskHealth",
+    "part": 2,
+    "total_parts": 2,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-DiskHealth\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "foreach ($volume in $volumes) {\r\n        $usedGB = [math]::Round($volume.SizeGB - $volume.FreeGB, 2)\r\n\r\n        $freePercentage = if ($volume.SizeGB -gt 0) {\r\n            [math]::Round(($volume.FreeGB / $volume.SizeGB) * 100, 2)\r\n        }\r\n        else {\r\n            0\r\n        }\r\n\r\n        $freeGBToCriticalThreshold = [math]::Max(\r\n            0,\r\n            [math]::Round(($volume.SizeGB * $criticalThreshold / 100) - $volume.FreeGB, 2)\r\n        )\r\n\r\n        $status = if ($volume.HealthStatus -ne \"Healthy\") {\r\n            \"Review\"\r\n        }\r\n        elseif ($freePercentage -lt $criticalThreshold) {\r\n            \"Critical\"\r\n        }\r\n        elseif ($freePercentage -lt $warningThreshold) {\r\n            \"Warning\"\r\n        }\r\n        else {\r\n            \"Healthy\"\r\n        }\r\n\r\n        $recommendedAction = switch ($status) {\r\n            \"Critical\" {\r\n                \"Free disk space immediately; the volume is below the critical threshold.\"\r\n            }\r\n            \"Warning\" {\r\n                \"Review disk usage and plan cleanup before free space falls below the critical threshold.\"\r\n            }\r\n            \"Review\" {\r\n                \"Investigate the volume health reported by Windows before relying on this disk.\"\r\n            }\r\n            default {\r\n                \"No action required. Continue routine capacity monitoring.\"\r\n            }\r\n        }\r\n\r\n        [pscustomobject]@{\r\n            Drive = \"$($volume.DriveLetter):\"\r\n            IsSystemDrive = $volume.DriveLetter -eq $env:SystemDrive.Substring(0, 1)\r\n            DriveType = $volume.DriveType\r\n            Label = $volume.FileSystemLabel\r\n            FileSystem = $volume.FileSystem\r\n            HealthStatus = $volume.HealthStatus\r\n            OperationalStatus = $volume.OperationalStatus\r\n            VolumePath = $volume.Path\r\n            VolumeId = $volume.UniqueId\r\n            SizeGB = $volume.SizeGB\r\n            FreeGB = $volume.FreeGB\r\n            UsedGB = $usedGB\r\n            FreePercentage = $freePercentage\r\n            FreeGBToCriticalThreshold = $freeGBToCriticalThreshold\r\n            UsedPercentage = [math]::Round(100 - $freePercentage, 2)\r\n            WarningThresholdPercentage = $warningThreshold\r\n            CriticalThresholdPercentage = $criticalThreshold\r\n            Status = $status\r\n            RecommendedAction = $recommendedAction\r\n        }\r\n    }",
+    "character_count": 2374,
+    "token_count": 505,
+    "over_token_limit": true
+  },
+  {
+    "chunk_id": "Get-ServiceHealth",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-ServiceHealth",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-ServiceHealth\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Get-ServiceHealth {\n$requiredServices = @(\r\n        \"EventLog\",\r\n        \"Winmgmt\",\r\n        \"LanmanWorkstation\",\r\n        \"Schedule\",\r\n        \"BITS\"\r\n    )\n\nforeach ($serviceName in $requiredServices) {\r\n        $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue\r\n\r\n        [pscustomobject]@{\r\n            Name = $serviceName\r\n            Exists = $null -ne $service\r\n            Status = if ($null -ne $service) {\r\n                $service.Status.ToString()\r\n            }\r\n            else {\r\n                \"NotInstalled\"\r\n            }\r\n            StartType = if ($null -ne $service) {\r\n                $service.StartType.ToString()\r\n            }\r\n            else {\r\n                \"Unknown\"\r\n            }\r\n            Compliance = if ($null -ne $service -and $service.Status -eq \"Running\") {\r\n                \"Healthy\"\r\n            }\r\n            else {\r\n                \"Review\"\r\n            }\r\n        }\r\n    }\n}",
+    "character_count": 957
+  },
+  {
+    "chunk_id": "Get-SecurityStatus",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-SecurityStatus",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-SecurityStatus\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Get-SecurityStatus {\n$defenderCommand = Get-Command `\r\n        -Name Get-MpComputerStatus `\r\n        -ErrorAction SilentlyContinue\n\nif ($null -eq $defenderCommand) {\r\n        return [pscustomobject]@{\r\n            Available = $false\r\n            Status = \"Defender command unavailable\"\r\n        }\r\n    }\n\ntry {\r\n        $defender = Get-MpComputerStatus\r\n\r\n        [pscustomobject]@{\r\n            Available = $true\r\n            AntivirusEnabled = $defender.AntivirusEnabled\r\n            RealTimeProtectionEnabled = $defender.RealTimeProtectionEnabled\r\n            AntivirusSignatureAge = $defender.AntivirusSignatureAge\r\n            QuickScanAge = $defender.QuickScanAge\r\n            Status = if (\r\n                $defender.AntivirusEnabled -and\r\n                $defender.RealTimeProtectionEnabled\r\n            ) {\r\n                \"Healthy\"\r\n            }\r\n            else {\r\n                \"Review\"\r\n            }\r\n        }\r\n    }\r\n    catch {\r\n        [pscustomobject]@{\r\n            Available = $true\r\n            Status = \"Unable to query Defender\"\r\n            Error = $_.Exception.Message\r\n        }\r\n    }\n}",
+    "character_count": 1128
+  },
+  {
+    "chunk_id": "Get-PendingRebootStatus",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-PendingRebootStatus",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-PendingRebootStatus\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Get-PendingRebootStatus {\n$rebootLocations = @(\r\n        \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Component Based Servicing\\RebootPending\",\r\n        \"HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WindowsUpdate\\Auto Update\\RebootRequired\"\r\n    )\n\n$pendingLocations = @(\r\n        $rebootLocations |\r\n            Where-Object { Test-Path $_ }\r\n    )\n\n[pscustomobject]@{\r\n        PendingReboot = $pendingLocations.Count -gt 0\r\n        DetectedBy = $pendingLocations\r\n    }\n}",
+    "character_count": 489
+  },
+  {
+    "chunk_id": "Get-RecentSystemErrors",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Get-RecentSystemErrors",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Get-RecentSystemErrors\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Get-RecentSystemErrors {\nparam(\r\n        [int]$Hours\r\n    )\n\n$startTime = (Get-Date).AddHours(-$Hours)\n\ntry {\r\n        Get-WinEvent -FilterHashtable @{\r\n            LogName = \"System\"\r\n            Level = 2\r\n            StartTime = $startTime\r\n        } -MaxEvents 20 |\r\n            Select-Object `\r\n                TimeCreated,\r\n                ProviderName,\r\n                Id,\r\n                LevelDisplayName,\r\n                Message\r\n    }\r\n    catch {\r\n        [pscustomobject]@{\r\n            QueryFailed = $true\r\n            Error = $_.Exception.Message\r\n        }\r\n    }\n}",
+    "character_count": 592
+  },
+  {
+    "chunk_id": "Invoke-EndpointReadinessAudit",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "Invoke-EndpointReadinessAudit",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: Invoke-EndpointReadinessAudit\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "function Invoke-EndpointReadinessAudit {\nparam(\r\n        [string]$Destination,\r\n        [int]$ErrorLookbackHours\r\n    )\n\n$audit = [ordered]@{\r\n        GeneratedAt = Get-Date\r\n        Computer = Get-OsInventory\r\n        Disks = @(Get-DiskHealth)\r\n        Services = @(Get-ServiceHealth)\r\n        Security = Get-SecurityStatus\r\n        Reboot = Get-PendingRebootStatus\r\n        RecentSystemErrors = @(\r\n            Get-RecentSystemErrors -Hours $ErrorLookbackHours\r\n        )\r\n    }\n\n$audit |\r\n        ConvertTo-Json -Depth 8 |\r\n        Set-Content -Path $Destination -Encoding UTF8\n\n[pscustomobject]@{\r\n        OutputPath = $Destination\r\n        GeneratedAt = $audit.GeneratedAt\r\n        DiskCount = $audit.Disks.Count\r\n        ServiceCount = $audit.Services.Count\r\n        ErrorCount = $audit.RecentSystemErrors.Count\r\n    }\n}",
+    "character_count": 826
+  },
+  {
+    "chunk_id": "script",
+    "source_file": "C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1",
+    "unit": "script",
+    "part": 1,
+    "total_parts": 1,
+    "context": "You are converting PowerShell to Python.\n\nSource file: C:\\Sury(A)\\Code\\Utilities\\Data\\Code Conversion\\EndpointReadinessAuditing.ps1\nCurrent PowerShell unit: script\n\nRequirements:\n- Preserve behavior and validation.\n- Preserve error handling.\n- Replace PowerShell pipelines with clear Python equivalents.\n- Use only Python standard-library functionality unless explicitly requested.\n- Return valid, runnable Python.\n- Explain assumptions briefly after the code.\n",
+    "powershell": "Invoke-EndpointReadinessAudit `\r\n    -Destination $OutputPath `\r\n    -ErrorLookbackHours $RecentErrorHours",
+    "character_count": 106
+  }
+]
