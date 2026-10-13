@@ -1,107 +1,110 @@
-import json
+import hashlib
+import logging
 import os
-from datetime import datetime, timezone
+from contextlib import closing
+from typing import Any
 
 import dropbox
-from dotenv import load_dotenv
-from dropbox.files import DeletedMetadata, FileMetadata
-
 from airflow import DAG
-from airflow.models import Variable
 from airflow.operators.python import PythonOperator
+from pendulum import datetime
 
-load_dotenv()
+from ingestion_queue import (
+    connect,
+    enqueue_change,
+    ensure_tables,
+    get_cursor,
+    save_cursor,
+)
 
-STATE_KEY = "dropbox_reports_state"
-FOLDER_PATH = os.environ["DROPBOX_FOLDER_PATH"]  # Example: /Reports
+LOGGER = logging.getLogger(__name__)
+DAG_ID = "monitor_dropbox_folder"
 
 
-def monitor_folder():
-    dbx = dropbox.Dropbox(
-        oauth2_refresh_token=os.environ["DROPBOX_REFRESH_TOKEN"],
-        app_key=os.environ["DROPBOX_APP_KEY"],
-        app_secret=os.environ["DROPBOX_APP_SECRET"],
+def _change_event(entry: Any) -> dict[str, Any] | None:
+    path = getattr(entry, "path_display", None) or getattr(
+        entry, "path_lower", None
+    )
+    if not path or not path.lower().endswith(".pdf"):
+        return None
+
+    document_id = getattr(entry, "id", None) or path.lower()
+    revision = getattr(entry, "rev", None)
+    action = (
+        "delete"
+        if isinstance(entry, dropbox.files.DeletedMetadata)
+        else "upsert"
+    )
+    identity = f"{document_id}:{revision or ''}:{action}"
+    event_id = hashlib.sha256(identity.encode("utf-8")).hexdigest()
+
+    return {
+        "event_id": event_id,
+        "document_id": document_id,
+        "file_path": path,
+        "revision": revision,
+        "action": action,
+    }
+
+
+def discover_dropbox_changes() -> None:
+    app_key = os.environ.get("DROPBOX_APP_KEY")
+    app_secret = os.environ.get("DROPBOX_APP_SECRET")
+    refresh_token = os.environ.get("DROPBOX_REFRESH_TOKEN")
+    folder_path = os.environ.get("DROPBOX_FOLDER_PATH", "")
+    if not all((app_key, app_secret, refresh_token)):
+        raise RuntimeError(
+            "DROPBOX_APP_KEY, DROPBOX_APP_SECRET, and "
+            "DROPBOX_REFRESH_TOKEN must be configured"
+        )
+
+    client = dropbox.Dropbox(
+        oauth2_refresh_token=refresh_token,
+        app_key=app_key,
+        app_secret=app_secret,
+    )
+    with closing(connect()) as connection:
+        with connection:
+            ensure_tables(connection)
+            cursor = get_cursor(connection)
+
+    page = (
+        client.files_list_folder_continue(cursor)
+        if cursor
+        else client.files_list_folder(folder_path, recursive=True)
     )
 
-    state = Variable.get(STATE_KEY, default_var=None, deserialize_json=True)
-    if state is None:
-        state = {"cursor": None, "inventory": {}, "initialized": False}
-
-    inventory = state["inventory"]
-    cursor = state["cursor"]
-    is_baseline = not state["initialized"]
-
-    if cursor:
-        page = dbx.files_list_folder_continue(cursor)
-    else:
-        page = dbx.files_list_folder(
-            FOLDER_PATH,
-            recursive=True,
-            include_deleted=True,
-        )
-
     while True:
-        for entry in page.entries:
-            path = getattr(entry, "path_lower", None)
-            if not path:
-                continue
+        with closing(connect()) as connection:
+            with connection:
+                ensure_tables(connection)
+                for entry in page.entries:
+                    event = _change_event(entry)
+                    if event:
+                        enqueue_change(connection, event)
+                        LOGGER.info(
+                            "Queued Dropbox %s event for %s",
+                            event["action"],
+                            event["file_path"],
+                        )
+                # Checkpoint only after all changes on this page are durable.
+                save_cursor(connection, page.cursor)
 
-            if isinstance(entry, DeletedMetadata):
-                previous = inventory.pop(path, None)
-                if previous is not None and not is_baseline:
-                    print(f"DELETED {previous['path']}")
-                continue
-
-            if not isinstance(entry, FileMetadata):
-                continue
-
-            current = {
-                "path": entry.path_display,
-                "rev": entry.rev,
-                "size": entry.size,
-                "modified": entry.server_modified.isoformat(),
-            }
-            previous = inventory.get(path)
-
-            if is_baseline:
-                print(f"BASELINE {entry.path_display}")
-            elif previous is None:
-                print(
-                    f"NEW FILE ARRIVED: {entry.name} (path: {entry.path_display})",
-                    flush=True,
-                )
-            elif previous != current:
-                print(f"CHANGED {entry.path_display}")
-
-            inventory[path] = current
-
-        cursor = page.cursor
-        has_more = page.has_more
-
-        # Save state after each page so a retry can continue from that cursor.
-        Variable.set(
-            STATE_KEY,
-            json.dumps({
-                "cursor": cursor,
-                "inventory": inventory,
-                "initialized": state["initialized"] or not has_more,
-            }),
-        )
-
-        if not has_more:
+        if not page.has_more:
             break
-
-        page = dbx.files_list_folder_continue(cursor)
+        page = client.files_list_folder_continue(page.cursor)
 
 
 with DAG(
-    dag_id="monitor_dropbox_folder",
-    start_date=datetime(2025, 1, 1, tzinfo=timezone.utc),
-    schedule=None,  # The webhook starts this DAG.
+    dag_id=DAG_ID,
+    description="Discover Dropbox PDF changes and enqueue them for processing",
+    start_date=datetime(2024, 1, 1),
+    schedule=None,
     catchup=False,
     max_active_runs=1,
+    tags=["dropbox", "ingestion"],
 ) as dag:
-    PythonOperator(
-        task_id="check_dropbox_folder",
-        python_callable=monitor_folder,
+    discover_changes = PythonOperator(
+        task_id="discover_dropbox_changes",
+        python_callable=discover_dropbox_changes,
     )
