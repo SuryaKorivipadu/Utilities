@@ -72,7 +72,7 @@ x-airflow-common:
     DROPBOX_FOLDER_PATH: ${DROPBOX_FOLDER_PATH}
     INGESTION_DATABASE_URL: "${INGESTION_DATABASE_URL:-postgresql://airflow:airflow@postgres:5432/ingestion}"
     INGESTION_ARTIFACT_DIR: /opt/airflow/data
-    PYTHONPATH: /opt/airflow/include
+    PYTHONPATH: /opt/airflow:/opt/airflow/include
     # WARNING: Use _PIP_ADDITIONAL_REQUIREMENTS option ONLY for a quick checks
     # for other purpose (development, test and especially production usage) build/extend Airflow image.
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-dropbox python-dotenv pymupdf4llm}

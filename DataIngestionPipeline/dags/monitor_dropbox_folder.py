@@ -69,6 +69,7 @@ def discover_dropbox_changes() -> None:
     app_secret = os.environ.get("DROPBOX_APP_SECRET")
     refresh_token = os.environ.get("DROPBOX_REFRESH_TOKEN")
     folder_path = os.environ.get("DROPBOX_FOLDER_PATH", "")
+    LOGGER.info("#" * 184)
     LOGGER.info(
         "Started %s task; checking Dropbox folder %s",
         DAG_ID,
@@ -124,7 +125,8 @@ def discover_dropbox_changes() -> None:
                 save_cursor(connection, page.cursor)
 
         LOGGER.info(
-            "Processed Dropbox page %d: %d entries, %d PDF changes queued",
+            "Processed Dropbox page %d: %d entries, "
+            "%d PDF changes queued",
             page_number,
             len(page.entries),
             page_queued_events,
@@ -135,7 +137,8 @@ def discover_dropbox_changes() -> None:
         page = client.files_list_folder_continue(page.cursor)
 
     LOGGER.info(
-        "Finished %s task: processed %d page(s), queued %d PDF change(s)",
+        "Finished %s task: processed %d page(s), "
+        "queued %d PDF change(s)",
         DAG_ID,
         page_number,
         queued_events,

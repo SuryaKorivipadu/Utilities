@@ -23,7 +23,7 @@ The monitor queues PDF changes. Processing currently extracts Markdown and image
 4. In your project Python environment, install webhook dependencies:
 
    ```powershell
-   python -m pip install fastapi uvicorn httpx python-dotenv
+   python -m pip install fastapi uvicorn httpx python-dotenv dropbox
    ```
 
 ## Start after a restart
@@ -53,11 +53,11 @@ Set the Dropbox app webhook URL to the ngrok HTTPS address with `/dropbox/webhoo
 ## Verify
 
 1. In Airflow at [http://localhost:8080](http://localhost:8080), trigger `monitor_dropbox_folder` once. The first run queues existing PDFs and saves the Dropbox cursor.
-2. Add or modify a PDF in the monitored Dropbox folder. The webhook should trigger the monitor DAG.
+2. Add, edit, or delete a file in the monitored Dropbox folder. The webhook checks Dropbox's cursor and triggers the monitor DAG only when it finds file changes. Duplicate notifications with no new changes do not create extra runs.
 3. Check the DAG task logs in Airflow. `process_dropbox_queue` checks for work every minute and handles up to 10 changes per run.
 4. Extracted Markdown and images are written to `data/`. The custom logger writes to `logs/ingestion_logs.log`.
 
-The monitor DAG also reconciles repeated webhook notifications using the saved cursor. Until the remaining processing stages are implemented, records are left as `awaiting_implementation`.
+The webhook keeps its own cursor in the ignored `dropbox_webhook_state.sqlite3` file. On its first startup, it saves a baseline and does not trigger a run for files already present. The monitor DAG has a separate cursor. The monitor currently queues PDF changes; other file types can trigger the DAG but are not processed by the PDF pipeline. Until the remaining processing stages are implemented, processed records are left as `awaiting_implementation`.
 
 ## Stop
 Stop ngrok and Uvicorn with `Ctrl+C`, then stop Airflow:
