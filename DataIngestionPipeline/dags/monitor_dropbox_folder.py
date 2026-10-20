@@ -1,6 +1,8 @@
 import hashlib
-import logging
+import importlib.util
 import os
+import sys
+from pathlib import Path
 from contextlib import closing
 from typing import Any
 
@@ -17,7 +19,24 @@ from ingestion_queue import (
     save_cursor,
 )
 
-LOGGER = logging.getLogger(__name__)
+project_root = Path(__file__).resolve().parents[1]
+logger_path = project_root / "logging.py"
+if not logger_path.is_file():
+    logger_path = project_root / "ingestion_logging.py"
+
+logger_module_name = "data_ingestion_logging"
+project_logging = sys.modules.get(logger_module_name)
+if project_logging is None:
+    logger_spec = importlib.util.spec_from_file_location(
+        logger_module_name, logger_path
+    )
+    if logger_spec is None or logger_spec.loader is None:
+        raise ImportError(f"Unable to load project logger from {logger_path}")
+    project_logging = importlib.util.module_from_spec(logger_spec)
+    logger_spec.loader.exec_module(project_logging)
+    sys.modules[logger_module_name] = project_logging
+
+LOGGER = project_logging.get_logger(__name__)
 DAG_ID = "monitor_dropbox_folder"
 
 
