@@ -2,8 +2,8 @@ import hashlib
 import importlib.util
 import os
 import sys
-from pathlib import Path
 from contextlib import closing
+from pathlib import Path
 from typing import Any
 
 import dropbox
@@ -20,9 +20,7 @@ from ingestion_queue import (
 )
 
 project_root = Path(__file__).resolve().parents[1]
-logger_path = project_root / "logging.py"
-if not logger_path.is_file():
-    logger_path = project_root / "ingestion_logging.py"
+logger_path = project_root / "ingestion_logging.py"
 
 logger_module_name = "data_ingestion_logging"
 project_logging = sys.modules.get(logger_module_name)
@@ -71,7 +69,13 @@ def discover_dropbox_changes() -> None:
     app_secret = os.environ.get("DROPBOX_APP_SECRET")
     refresh_token = os.environ.get("DROPBOX_REFRESH_TOKEN")
     folder_path = os.environ.get("DROPBOX_FOLDER_PATH", "")
+    LOGGER.info(
+        "Started %s task; checking Dropbox folder %s",
+        DAG_ID,
+        folder_path or "/",
+    )
     if not all((app_key, app_secret, refresh_token)):
+        LOGGER.error("Dropbox credentials are not fully configured")
         raise RuntimeError(
             "DROPBOX_APP_KEY, DROPBOX_APP_SECRET, and "
             "DROPBOX_REFRESH_TOKEN must be configured"
@@ -87,13 +91,21 @@ def discover_dropbox_changes() -> None:
             ensure_tables(connection)
             cursor = get_cursor(connection)
 
+    if cursor:
+        LOGGER.info("Continuing Dropbox listing from the saved cursor")
+    else:
+        LOGGER.info("Starting initial Dropbox listing")
     page = (
         client.files_list_folder_continue(cursor)
         if cursor
         else client.files_list_folder(folder_path, recursive=True)
     )
 
+    page_number = 0
+    queued_events = 0
     while True:
+        page_number += 1
+        page_queued_events = 0
         with closing(connect()) as connection:
             with connection:
                 ensure_tables(connection)
@@ -101,6 +113,8 @@ def discover_dropbox_changes() -> None:
                     event = _change_event(entry)
                     if event:
                         enqueue_change(connection, event)
+                        page_queued_events += 1
+                        queued_events += 1
                         LOGGER.info(
                             "Queued Dropbox %s event for %s",
                             event["action"],
@@ -109,10 +123,23 @@ def discover_dropbox_changes() -> None:
                 # Checkpoint only after all changes on this page are durable.
                 save_cursor(connection, page.cursor)
 
+        LOGGER.info(
+            "Processed Dropbox page %d: %d entries, %d PDF changes queued",
+            page_number,
+            len(page.entries),
+            page_queued_events,
+        )
         if not page.has_more:
             break
+        LOGGER.info("More Dropbox changes are available; fetching next page")
         page = client.files_list_folder_continue(page.cursor)
 
+    LOGGER.info(
+        "Finished %s task: processed %d page(s), queued %d PDF change(s)",
+        DAG_ID,
+        page_number,
+        queued_events,
+    )
 
 with DAG(
     dag_id=DAG_ID,

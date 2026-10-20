@@ -2,7 +2,7 @@ import logging
 import os
 from logging.handlers import RotatingFileHandler
 
-log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 os.makedirs(log_path, exist_ok=True)
 
 # Add a custom field used by the formatter below.

@@ -13,17 +13,13 @@ The monitor queues PDF changes. Processing currently extracts Markdown and image
 1. Install Docker Desktop, Python, and ngrok. Configure your ngrok authtoken.
 2. Create `.env` in this folder with your Dropbox app credentials:
 `DROPBOX_FOLDER_PATH` is the folder to monitor.
-
 3. Start Airflow and create the ingestion database:
-
    ```powershell
    docker compose up airflow-init
    docker compose exec postgres psql -U airflow -d postgres -c "CREATE DATABASE ingestion;"
    docker compose up -d
    ```
-
    Create the database only once. Open [http://localhost:8080](http://localhost:8080) and sign in with the configured Airflow credentials (the quick-start defaults are `airflow` / `airflow`).
-
 4. In your project Python environment, install webhook dependencies:
 
    ```powershell
@@ -31,7 +27,6 @@ The monitor queues PDF changes. Processing currently extracts Markdown and image
    ```
 
 ## Start after a restart
-
 Run these in separate PowerShell windows from this project folder.
 
 **Airflow**
@@ -65,7 +60,6 @@ Set the Dropbox app webhook URL to the ngrok HTTPS address with `/dropbox/webhoo
 The monitor DAG also reconciles repeated webhook notifications using the saved cursor. Until the remaining processing stages are implemented, records are left as `awaiting_implementation`.
 
 ## Stop
-
 Stop ngrok and Uvicorn with `Ctrl+C`, then stop Airflow:
 
 ```powershell
@@ -75,11 +69,20 @@ docker compose down
 Do not add `--volumes` unless you intend to delete Airflow state, including the queue and cursor.
 
 ## Troubleshooting
-
 - **DAG missing or import error:** run `docker compose logs airflow-scheduler`; check the `dags/` mount and Airflow dependencies.
 - **Dropbox credentials missing:** check the Dropbox values in `.env` and the Compose environment mappings, then run `docker compose up -d`.
 - **Webhook cannot trigger Airflow:** verify `AIRFLOW_API_URL`, credentials, and the DAG ID `monitor_dropbox_folder`.
-- **Database connection error:** verify the `ingestion` database exists and `INGESTION_DATABASE_URL` uses the Compose hostname `postgres`.
-- **No queued files:** check the monitor task logs, `DROPBOX_FOLDER_PATH`, and whether the initial monitor run succeeded.
+- **Database connection error:** from this project folder, check whether the `ingestion` database exists:
 
-Never commit or share Dropbox tokens, app secrets, or Airflow credentials.
+  ```powershell
+  docker compose exec postgres psql -U airflow -d postgres -c "SELECT datname FROM pg_database WHERE datname = 'ingestion'"
+  ```
+
+  If it does not exist, create it:
+
+  ```powershell
+  docker compose exec postgres psql -U airflow -d postgres -c "CREATE DATABASE ingestion"
+  ```
+
+  Also verify `INGESTION_DATABASE_URL` uses the Compose hostname `postgres`.
+- **No queued files:** check the monitor task logs, `DROPBOX_FOLDER_PATH`, and whether the initial monitor run succeeded.
